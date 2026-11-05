@@ -1,0 +1,41 @@
+version: "3.8"
+
+networks:
+  iot-network:
+    name: iot_vlan_isolated
+    driver: bridge
+
+volumes:
+  mosquitto_data:
+  mosquitto_log:
+  homeassistant_config:
+
+services:
+  # 1. Eclipse Mosquitto MQTT Broker
+  mqtt_broker:
+    image: eclipse-mosquitto:2.0
+    container_name: iot_mosquitto_broker
+    ports:
+      - "1883:1883"
+      - "9001:9001" # WebSockets
+    volumes:
+      - ./config/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+    restart: unless-stopped
+    networks:
+      - iot-network
+
+  # 2. Home Assistant Automation Hub
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: iot_homeassistant_core
+    privileged: true
+    volumes:
+      - homeassistant_config:/config
+      - /etc/localtime:/etc/localtime:ro
+    restart: unless-stopped
+    ports:
+      - "8123:8123"
+    networks:
+      - iot-network
