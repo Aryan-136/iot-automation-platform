@@ -1,0 +1,36 @@
+# ==============================================================================
+# IoT Automation Platform - Event Triggers & Actions
+# ==============================================================================
+
+- id: 'alert_high_temperature_warning'
+  alias: 'Critical Environmental Temperature Warning'
+  description: 'Triggers when ESP32 environmental sensor exceeds 42C threshold'
+  trigger:
+    - platform: numeric_state
+      entity_id: sensor.esp32_livingroom_temp
+      above: 42.0
+      for:
+        minutes: 2
+  action:
+    - service: notify.persistent_notification
+      data:
+        title: "ðŸ”¥ High Thermal Threshold Exceeded"
+        message: "ESP32 Sensor livingroom reported {{ states('sensor.esp32_livingroom_temp') }}Â°C."
+    - service: mqtt.publish
+      data:
+        topic: "home/actuators/cooling/relay1"
+        payload: "ON"
+  mode: single
+
+- id: 'heartbeat_sensor_watchdog'
+  alias: 'IoT Node Watchdog & Offline Detection'
+  description: 'Monitors LWT (Last Will and Testament) MQTT messages from ESP32 nodes'
+  trigger:
+    - platform: mqtt
+      topic: "home/telemetry/+/status"
+      payload: "offline"
+  action:
+    - service: persistent_notification.create
+      data:
+        title: "âš ï¸ IoT Node Disconnected"
+        message: "Node on topic {{ trigger.topic }} reported offline status."
